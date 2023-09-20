@@ -2,12 +2,13 @@ import torch
 import random
 import numpy as np
 import pandas as pd
-from DeepFM.network import DeepFM
+from DeepFM.network_mm import DeepFM
 
 from sklearn.metrics import log_loss, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 import time
+import torch_mlu
 
 deepfm_config = \
     {
@@ -15,7 +16,7 @@ deepfm_config = \
         'dnn_hidden_units': [512, 256, 128],
         'dnn_dropout': 0.9,
         'num_epoch': 10,
-        'batch_size': 4,
+        'batch_size': 1024,
         'init_std': 0.001,
         'l2_reg_linear': 1e-3,
         'l2_reg_embedding': 0.00001,
@@ -80,6 +81,23 @@ if __name__ == "__main__":
 
     model = DeepFM(deepfm_config, feat_sizes, sparse_feature_columns=sparse_features,
                    dense_feature_columns=dense_features)
+
+    model.eval()
+    input_t = torch.randn(4, 39)
+
+    traced_model = torch.jit.trace(model, input_t, check_trace=False)
+
+    inputs = [torch_mlu.Input((4, 39), dtype=torch.float32, format=torch.contiguous_format)]
+
+    compile_spec = {
+        "inputs": inputs,
+        "device": {"mlu_id": 0},
+        "enabled_precisions": {torch.float},
+    }
+
+    compiled_model = torch_mlu.ts.compile(traced_model, **compile_spec)
+
+    print("Ready Trace\n")
 
     model.fit(train_model_input, train[target].values,
               test_model_input, test[target].values,

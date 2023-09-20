@@ -15,7 +15,7 @@ deepfm_config = \
         'ebedding_size': 8,
         'dnn_hidden_units': [512, 256, 128],
         'dnn_dropout': 0.9,
-        'num_epoch': 200,
+        'num_epoch': 100,
         'batch_size': 1024,
         'init_std': 0.001,
         'l2_reg_linear': 1e-3,
